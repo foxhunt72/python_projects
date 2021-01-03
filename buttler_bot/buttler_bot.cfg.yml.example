@@ -1,0 +1,10 @@
+---
+telegram_bot_token: <bottoken>
+my_user_id: <your_telegram_user_id, the bot only listened to this>
+commands:
+  - text: test
+    command: echo "dit is een test"
+    help: just a test command
+  - text: test2
+    command: pwd
+    help: get pwd
