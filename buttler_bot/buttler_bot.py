@@ -1,14 +1,26 @@
 #!/usr/bin/python3
 
 # foxhunt72
-# testing telegram bot
+# telegram bot
 
 from telegram.ext import Updater
+import logging
 from pprint import pprint
 import os
+import sys
+
+# init logger
+logger = logging.getLogger('buttler_bot')
+hdlr = logging.FileHandler(os.path.expanduser('~/buttler_bot.log'))
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
+hdlr.setFormatter(formatter)
+logger.addHandler(hdlr)
+hdout=logging.StreamHandler(sys.stdout)
+hdout.setFormatter(formatter)
+logger.addHandler(hdout)
+logger.setLevel(logging.INFO)
 
 config_file="~/.config/buttler_bot/config.yml"
-
 config_expand=os.path.expanduser(config_file)
 
 try:
@@ -37,54 +49,55 @@ except:
 
 for i in ['telegram_bot_token','my_user_id', 'commands']:
   if not i in config:
-    print('missing value in <%> config file' % i)
+    logger.error('missing value in <%> config file' % i)
     exit(1)
 
 try:
   if len(config['commands']) == 0:
-    print('missing commands in config file')
+    logger.error('missing commands in config file')
     exit(2)
 except:
-  print('issue reading config <commands> section.')
+  logger.error('issue reading config <commands> section.')
   exit(3)
 
 updater = Updater(token=config['telegram_bot_token'], use_context=True)
 import subprocess
-version = '0.1'
+version = '0.2'
 
 
 my_user_id=config['my_user_id']
 
 dispatcher = updater.dispatcher
 
-import logging
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                     level=logging.INFO)
 
 def start(update, context):
     if update.effective_chat.id == my_user_id:
-      context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+      context.bot.send_message(chat_id=update.effective_chat.id, text="I am here, what can i do for you.")
 
 from telegram.ext import CommandHandler
 start_handler = CommandHandler('start', start)
 dispatcher.add_handler(start_handler)
 
 def run_command(command_str):
+    logger.info('run_command: %s' % command_str)
     output = subprocess.getoutput(command_str)
     if output == "":
       output = "return ok"
     return(output)
 
 def echo(update, context):
-    print(update.effective_chat.id)
+    logger.debug(update.effective_chat.id)
+    #import pdb; pdb.set_trace()
+
     if update.effective_chat.id == my_user_id:
       my_text=update.message.text.lower()
       return_text=update.message.text
       if my_text == 'ping':
+        logger.info('ping/pong')
         return_text = 'pong '+version
       for i in config['commands']:
-        print('check: <%s> <%s>' % (my_text,i['text']))
         if my_text == i['text']:
+          logger.info('found text: %s' % i['text'])
           if 'command' in i:
             return_text=run_command(i['command'])
           else:
@@ -103,4 +116,5 @@ from telegram.ext import MessageHandler, Filters
 echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
 dispatcher.add_handler(echo_handler)
 
+logger.info('starting buttler_bot')
 updater.start_polling()
